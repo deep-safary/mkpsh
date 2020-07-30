@@ -1,0 +1,1720 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+#   mkpsh
+#       Create a parameter-sheet html file.
+#       supported RHEL/CentOS 7.1 or higher
+#
+#   usage: mkpsh
+#
+#   args: None
+#
+#   output: $HOSTNAME.html file.
+#
+#   return: 0 only
+#
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#   fnc_htmlheader
+#       HTMLのヘッダ要素を出力する
+#-------------------------------------------------------------------------------
+function fnc_htmlheader {
+    cat << EOL
+<!doctype html>
+<html lang="ja">
+<head>
+<title>${HOSTNAME} Parameter Sheet</title>
+<meta charset="UTF-8">
+<style>
+* {
+  font-family:      'MS gothic',monospace;
+}
+
+html {
+  font-size:        0.8em;
+  font-family:      'MS gothic',monospace;
+}
+
+body {
+  font-size:        0.9em;
+  font-family:      'MS gothic',monospace;
+}
+
+h1 {
+  background-color: #006099;
+  border-style:     outset;
+  color:            white;
+  margin-top:       20px;
+  margin-bottom:    10px;
+  padding:          2px;
+}
+
+h2 {
+  background-color: #009999;
+  border-style:     outset;
+  color:            white;
+  margin-top:       20px;
+  margin-bottom:    10px;
+  padding:          2px;
+}
+
+h3 {
+  background-color: gray;
+  border-style:     outset;
+  color:            white;
+  margin-top:       20px;
+  margin-bottom:    10px;
+  padding:          2px;
+}
+
+table {
+  border:           solid 1px;
+  border-collapse:  collapse;
+  margin:           6px;
+  width:            99%;
+}
+
+td {
+  border:           solid 1px;
+  padding:          4px;
+  vertical-align:   top;
+}
+
+th {
+  background-color: #ffff00;
+  border:           solid 1px;
+  padding:          4px;
+  width:            120px;
+}
+
+textarea {
+  background-color: #f0ffff;
+  margin:           6px;
+  padding:          6px;
+  width:            98%;
+}
+
+div#site-block {
+  width:            100%;
+  height:           100%;
+}
+
+nav {
+  float:            left;
+  height:           100%;
+  overflow-y:       scroll;
+  padding:          5px;
+  position:         fixed;
+  width:            15%;
+}
+
+div#right-block {
+  float:            right;
+  margin-bottom:    80px;
+  padding-left:     10px;
+  width:            83%;
+}
+
+div#date {
+  margin-bottom:    80px;
+}
+
+</style>
+</head>
+
+<body class="container">
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_htmlfooter
+#       HTMLの最終行を出力する
+#-------------------------------------------------------------------------------
+function fnc_htmlfooter {
+    cat << EOL
+</div>
+</div>
+</body>
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_index
+#       HTML左側のINDEXを出力する
+#-------------------------------------------------------------------------------
+function fnc_index {
+    cat << EOL
+<nav>
+<h1>${HOSTNAME}</h1>
+<h1>INDEX</h1>
+<details>
+  <summary>OS基本設定</summary>
+  <li><a href="#ホスト名">ホスト名</a>
+  <li><a href="#OSバージョン">OSバージョン</a>
+  <li><a href="#日付と時刻">日付と時刻</a>
+  <li><a href="#キーボード">キーボード</a>
+  <li><a href="#言語サポート">言語サポート</a>
+</details>
+<br>
+
+<details>
+  <summary>YUM</summary>
+  <li><a href="#yum設定">yum設定</a>
+  <li><a href="#yumリポジトリ設定">yumリポジトリ設定</a>
+  <li><a href="#導入パッケージグループ">導入パッケージグループ</a>
+  <li><a href="#導入パッケージ">導入パッケージ</a>
+</details>
+<br>
+
+<details>
+  <summary>ネットワーク</summary>
+  <li><a href="#ネットワークインターフェース">ネットワークインターフェース</a>
+  <li><a href="#ルーティング">ルーティング</a>
+  <li><a href="#名前解決順序">名前解決順序</a>
+  <li><a href="#DNS">DNS</a>
+  <li><a href="#ホストテーブル">ホストテーブル</a>
+  <li><a href="#ポート定義">ポート定義</a>
+  <li><a href="#sshサーバ設定">sshサーバ設定</a>
+  <li><a href="#sshクライアント設定">sshクライアント設定</a>
+  <li><a href="#時刻同期">時刻同期</a>
+</details>
+<br>
+
+<details>
+  <summary>ディスク</summary>
+  <li><a href="#PV">PV</a>
+  <li><a href="#VG">VG</a>
+  <li><a href="#LV">LV</a>
+  <li><a href="#FS">FS</a>
+</details>
+<br>
+
+<details>
+  <summary>グループ/ユーザ</summary>
+  <li><a href="#グループ">グループ</a>
+  <li><a href="#ユーザ">ユーザ</a>
+  <li><a href="#ユーザリミット">ユーザリミット</a>
+  <li><a href="#/etc/profile">環境変数(全ユーザ共通)</a>
+  <li><a href="#.bash_profile">環境変数(ユーザ個別)</a>
+  <li><a href="#/etc/bashrc">bash環境変数(全ユーザ共通)</a>
+  <li><a href="#.bashrc">bash環境設定(ユーザ個別)</a>
+</details>
+<br>
+
+<details>
+  <summary>OS詳細設定</summary>
+  <li><a href="#Ctrl+Alt+Del">Ctrl+Alt+Del設定</a>
+  <li><a href="#カーネルパラメータ">カーネルパラメータ</a>
+  <li><a href="#カーネルモジュール設定">カーネルモジュール設定</a>
+  <li><a href="#kdump">kdump</a>
+  <li><a href="#GRUB2">GRUB2</a>
+  <li><a href="#/etc/motd">/etc/motd</a>
+  <li><a href="#/etc/issue">/etc/issue</a>
+</details>
+<br>
+
+<details>
+  <summary>セキュリティ設定</summary>
+  <li><a href="#SELinux">SELinux</a>
+  <li><a href="#PAM">PAM</a>
+  <li><a href="#パスワードポリシー">パスワードポリシー</a>
+  <li><a href="#sudo">sudo</a>
+  <li><a href="#ssh鍵ファイル">ssh鍵ファイル</a>
+</details>
+<br>
+
+<details>
+  <summary>Firewall設定</summary>
+  <li><a href="#firewalld">firewalld</a>
+  <li><a href="#Default Zone">Default Zone</a>
+  <li><a href="#Active Zone">Active Zone</a>
+  <li><a href="#サービス設定">サービス設定</a>
+</details>
+<br>
+
+<details>
+  <summary>サービス起動設定</summary>
+  <li><a href="#デフォルトターゲット">デフォルトターゲット</a>
+  <li><a href="#起動サービス">起動サービス</a>
+</details>
+<br>
+
+<details>
+  <summary>ログ設定</summary>
+  <li><a href="#rsyslog">rsyslog</a>
+  <li><a href="#logrotate">logrotate</a>
+</details>
+<br>
+
+<details>
+  <summary>ジョブ設定</summary>
+  <li><a href="#cron">cron</a>
+  <li><a href="#anacron">anacron</a>
+</details>
+<br>
+
+<details>
+  <summary>サーバサービス設定</summary>
+  <li><a href="#NFS">NFS</a>
+  <li><a href="#samba">samba</a>
+  <li><a href="#vsftpd">vsftpd</a>
+  <li><a href="#SNMP">SNMP</a>
+  <li><a href="#Apache">Apache</a>
+</details>
+<br>
+<div id="date">
+作成日時:<br>
+$(date)
+</div>
+</nav>
+
+<div id="right-block">
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_hostname
+#       ホスト名情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_hostname {
+    typeset buf=$(uname -n)
+    cat << EOL
+<h2><a name="ホスト名">ホスト名</a></h2>
+<table>
+  <tr><th>ホスト名</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>uname -n</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_version
+#       OS情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_version {
+    typeset os=$(cat /etc/redhat-release)
+    typeset kernel=$(uname -r)
+    cat << EOL
+<h2><a name="OSバージョン">OSバージョン</a></h2>
+<table>
+  <tr><th>項目</th> <th>値</th> <th>確認コマンド/ファイル</th> <th>備考</th></tr>
+  <tr><th>OSバージョン</th>     <td>${os}</td> <td>/etc/redhat-release</td> <td></td></tr>
+  <tr><th>Kernelバージョン</th> <td>${kernel}</td> <td>uname -r</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_timezone
+#       日付と時刻情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_timezone {
+    typeset buf=$(timedatectl | awk -F: '/Time zone/ {print $2}')
+    cat << EOL
+<h2><a name="日付と時刻">日付と時刻</a></h2>
+<table>
+  <tr><th>タイムゾーン</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>timedatectl</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_keyboard
+#       キーボード情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_keyboard {
+    typeset buf=$(localectl | awk -F: '/Keymap/ {print $2}')
+    cat << EOL
+<h2><a name="キーボード">キーボード</a></h2>
+<table>
+  <tr><th>キーボード</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>localectl</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_lang
+#       言語サポート情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_lang {
+    typeset buf=$(localectl | awk -F: '/Locale/ {print $2}')
+    cat << EOL
+<h2><a name="言語サポート">言語サポート</a></h2>
+<table>
+  <tr><th>言語環境</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>localectl</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_yumconf
+#       /etc/yum.conf情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_yumconf {
+    typeset -i rows=$(cat /etc/yum.conf | wc -l)
+
+    if (( rows > 5 )) ; then
+        rows=10
+    else
+        rows=5
+    fi
+
+    cat << EOL
+<h2><a name="yum設定">yum設定</a></h2>
+<h3>/etc/yum.conf</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat /etc/yum.conf 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_yumrepos
+#       /etc/yum.repos.d情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_yumrepos {
+    cat << EOL
+<h2><a name="yumリポジトリ設定">yumリポジトリ設定</a></h2>
+EOL
+    for buf in $(ls /etc/yum.repos.d/*.repo)
+    do
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_yumrpmg
+#       導入パッケージグループ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_yumrpmg {
+    typeset buf=$(yum group list installed 2>&1)
+
+    cat << EOL
+<h2><a name="導入パッケージグループ">導入パッケージグループ</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>yum group list installed</td></tr>
+</table>
+<textarea rows="10" wrap="off" readonly>
+${buf}
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_yumrpm
+#       導入パッケージ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_yumrpm {
+    typeset cmd='LANG=C rpm -qa --queryformat "%-40{NAME}%-20{VERSION}%-50{RELEASE}%{INSTALLTIME:date}\n"'
+    typeset buf=$(LANG=C rpm -qa --queryformat "%-40{NAME}%-20{VERSION}%-50{RELEASE}%{INSTALLTIME:date}\n")
+
+    cat << EOL
+<h2><a name="導入パッケージ">導入パッケージ</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>${cmd}</td></tr>
+</table>
+<textarea rows="10" wrap="off" readonly>
+$(printf "%-40s%-20s%-50s%s\n" "#Name" "Version" "Release" "InstallDate")
+${buf}
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_netif
+#       /etc/sysconfig/network-scripts/ifcfg*情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_netif {
+    cat << EOL
+<h2><a name="ネットワークインターフェース">ネットワークインターフェース</a></h2>
+EOL
+
+    for buf in $(ls /etc/sysconfig/network-scripts/ifcfg-e* | grep -v @)
+    do
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_route
+#       ルーティング情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_route {
+    typeset    rc=0
+    typeset    cmd
+    typeset    buf
+    typeset -i rows=0
+
+    # check netstat command exists
+    which netstat >/dev/null 2>&1
+    rc=$?
+    if [[ ${rc} == 0 ]] ; then
+        cmd="netstat -rn"
+    else
+        cmd="ip r"
+    fi
+
+    buf=$(${cmd})
+    rows=$(echo ${buf} | wc -l)
+
+    if (( rows > 5 )) ; then
+        rows=10
+    else
+        rows=5
+    fi
+
+    cat << EOL
+<h2><a name="ルーティング">ルーティング</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>${cmd}</td></tr>
+</table>
+<textarea rows="${rows}" wrap="off" readonly>
+${buf}
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_nsswitch
+#       名前解決順序情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_nsswitch {
+    cat << EOL
+<h2><a name="名前解決順序">名前解決順序</a></h2>
+<h3>/etc/nsswitch.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/nsswitch.conf 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_dns
+#       DNS情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_dns {
+    cat << EOL
+<h2><a name="DNS">DNS</a></h2>
+<h3>/etc/resolv.conf</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/resolv.conf 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_hosts
+#       hosts情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_hosts {
+    typeset -i rows=$(cat /etc/hosts | wc -l)
+
+    if (( rows > 5 )) ; then
+        rows=10
+    else
+        rows=5
+    fi
+
+    cat << EOL
+<h2><a name="ホストテーブル">ホストテーブル</a></h2>
+<h3>/etc/hosts</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat /etc/hosts 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_services
+#       port情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_services {
+    cat << EOL
+<h2><a name="ポート定義">ポート定義</a></h2>
+<h3>/etc/services</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/services 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_sshd
+#       sshサーバ設定情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_sshd {
+    cat << EOL
+<h2><a name="sshサーバ設定">sshサーバ設定</a></h2>
+<h3>/etc/ssh/sshd_config</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/ssh/sshd_config 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_ssh
+#       sshクライアント設定情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_ssh {
+    cat << EOL
+<h2><a name="sshクライアント設定">sshクライアント設定</a></h2>
+<h3>/etc/ssh/ssh_config</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/ssh/ssh_config 2>&1)
+</textarea>
+
+EOL
+
+    for buf in $(ls /etc/ssh/ssh_config.d/*.conf 2>/dev/null)
+    do
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_chrony
+#       時刻同期情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_chrony {
+    cat << EOL
+<h2><a name="時刻同期">時刻同期</a></h2>
+<h3>/etc/chrony.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/chrony.conf 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_pv
+#       物理ボリューム情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_pv {
+    cat << EOL
+<h2><a name="PV">PV</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>lsblk -l | grep disk</td></tr>
+</table>
+<table>
+  <tr><th>Device</th> <th>Size</th> <th>備考</th></tr>
+  $(lsblk -l | awk '{if($6=="disk")print "<tr><td>"$1"</td> <td>"$4"</td><td></td></tr>"}')
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_vg
+#       ボリュームグループ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_vg {
+    cat << EOL
+<h2><a name="VG">VG</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>vgs --options vg_name,pv_name,vg_extent_size</td></tr>
+</table>
+<table>
+  <tr><th>VG</th> <th>PV</th> <th>ExtentSize</th> <th>備考</th></tr>
+  $(vgs --noheadings --options vg_name,pv_name,vg_extent_size 2>/dev/null | \
+    awk '{
+        printf("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td></td></tr>\n", $1, $2, $3);
+    '})
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_lv
+#       論理ボリューム情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_lv {
+    cat << EOL
+<h2><a name="LV">LV</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>lvs --options vg_name,lv_name,lv_size</td></tr>
+</table>
+<table>
+  <tr><th>VG</th> <th>LV</th> <th>LVSize</th> <th>備考</th></tr>
+  $(lvs --noheadings --options vg_name,lv_name,lv_size 2>/dev/null| \
+    awk '{
+      printf("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td></td></tr>\n", $1, $2, $3);
+    '})
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_fs
+#       ファイルシステム情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_fs {
+    cat << EOL
+<h2><a name="FS">FS</a></h2>
+<h3>/etc/fstab</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/fstab 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_group
+#       グループ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_group {
+    cat << EOL
+<h2><a name="グループ">グループ</a></h2>
+<h3>/etc/group</h3>
+<table>
+  <tr><th>Name</th> <th>GID</th> <th>Users</th> <th>備考</th></tr>
+$(awk -F: '{
+  printf("  <tr><td>%s</td> <td>%s</td> <td>%s</td> <td></td></tr>\n",$1,$3,$4);
+}' /etc/group)
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_user
+#       ユーザ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_user {
+    cat << EOL
+<h2><a name="ユーザ">ユーザ</a></h2>
+<h3>/etc/passwd</h3>
+<table>
+  <tr><th>Name</th> <th>UID</th> <th>GID</th> <th>Description</th> <th>Home</th> <th>Shell</th> <th>備考</th></tr>
+$(awk -F: '{
+  printf("  <tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td></td></tr>\n",$1,$3,$4,$5,$6,$7);
+}' /etc/passwd)
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_limits
+#       ユーザリミット情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_limits {
+    cat << EOL
+<h2><a name="ユーザリミット">ユーザリミット</a></h2>
+<h3>/etc/security/limits.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/security/limits.conf 2>&1)
+</textarea>
+
+EOL
+
+    for buf in $(ls /etc/security/limits.d/*.conf 2>/dev/null)
+    do
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_profile
+#       /etc/profile情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_profile {
+    cat << EOL
+<h2><a name="/etc/profile">環境変数(全ユーザ共通)</a></h2>
+<h3>/etc/profile</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/profile 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_bash_profile
+#       $HOME/.bash_profile情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_bash_profile {
+    cat << EOL
+<h2><a name=".bash_profile">環境変数(ユーザ個別)</a></h2>
+EOL
+    for buf in $(awk -F: '{if($7=="/bin/bash")print $6}' /etc/passwd)
+    do
+        cat << EOL
+<h3>${buf}/.bash_profile</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf}/.bash_profile 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_etc_bashrc
+#       /etc/bashrc情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_etc_bashrc {
+    cat << EOL
+<h2><a name="/etc/bashrc">bash環境設定(全ユーザ共通)</a></h2>
+<h3>/etc/bashrc</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/bashrc 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_bashrc
+#       $HOME/.bashrc情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_bashrc {
+    cat << EOL
+<h2><a name=".bashrc">bash環境設定(ユーザ個別)</a></h2>
+EOL
+    for buf in $(awk -F: '{if($7=="/bin/bash")print $6}' /etc/passwd)
+    do
+        cat << EOL
+<h3>${buf}/.bashrc</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf}/.bashrc 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_ctrlaltdel
+#       Ctrl+Alt+Del制御情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_ctrlaltdel {
+    typeset mask=$(systemctl status ctrl-alt-del.target | grep Loaded: | awk '{print $2}')
+    typeset action=$(grep ^CtrlAltDelBurstAction /etc/systemd/system.conf | awk -F= '{print $2}')
+    if [[ -z "${action}" ]] ; then
+        action="reboot-force"
+    fi
+
+    cat << EOL
+<h2><a name="Ctrl+Alt+Del">Ctrl+Alt+Del設定</a></h2>
+<table>
+  <tr><th>項目</th> <th>値</th> <th>確認コマンド/ファイル</th> <th>備考</th></tr>
+  <tr><th>Ctrl+Alt+Del抑止</th> <td>${mask}</td> <td>systemctl status ctrl-alt-del.target</td> <td>loaded=再起動する/masked=再起動しない</td></tr>
+  <tr><th>CtrlAltDelBurstAction</th> <td>${action}</td> <td>/etc/systemd/system.conf</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_sysctl
+#       カーネルパラメータ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_sysctl {
+    cat << EOL
+<h2><a name="カーネルパラメータ">カーネルパラメータ</a></h2>
+<h3>カーネルチューニング値</h3>
+<table>
+  <tr><th>確認コマンド</th> <td>sysctl -a</td></tr>
+</table>
+<textarea rows="10" wrap="off" readonly>
+$(sysctl -a 2>&1)
+</textarea>
+
+EOL
+
+    for buf in $(ls /etc/sysctl.d/*.conf)
+    do
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat ${buf})
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_modprobe
+#       カーネルモジュール設定情報を出力する
+#       blacklist.conf も存在すれば出力される
+#-------------------------------------------------------------------------------
+function fnc_modprobe {
+    typeset -i rows=0
+
+    cat << EOL
+<h2><a name="カーネルモジュール設定">カーネルモジュール設定</a></h2>
+EOL
+
+    for buf in $(ls /etc/modprobe.d/*.conf)
+    do
+        rows=$(cat ${buf} 2>/dev/null | wc -l)
+        if (( rows > 5 )) ; then
+            rows=10
+        else
+            rows=5
+        fi
+
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat ${buf})
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_kdump
+#       カーネルダンプ設定情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_kdump {
+    typeset buf1=$(systemctl is-enabled kdump)
+    typeset buf2=$(systemctl is-active kdump)
+    cat << EOL
+<h2><a name="kdump">kdump</a></h2>
+<h3>kdump有効/無効</h3>
+<table>
+  <tr><th>kdump有効</th> <th>active</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf1}</td> <td>${buf2}</td> <td>systemctl status kdump</td> <td></td></tr>
+</table>
+
+<h3>/etc/kdump.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/kdump.conf)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_grub
+#       ブートローダ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_grub {
+    cat << EOL
+<h2><a name="GRUB2">GRUB2</a></h2>
+<h3>/etc/default/grub</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/default/grub)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_motd
+#       /etc/motd情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_motd {
+    typeset -i rows=$(cat /etc/motd 2>/dev/null | wc -l)
+
+    if (( rows > 5 )) ; then
+        rows=10
+    else
+        rows=5
+    fi
+
+    cat << EOL
+<h2><a name="/etc/motd">/etc/motd</a></h2>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat /etc/motd)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_issue
+#       /etc/issue情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_issue {
+    typeset -i rows=$(cat /etc/issue 2>/dev/null | wc -l)
+
+    if (( rows > 5 )) ; then
+        rows=10
+    else
+        rows=5
+    fi
+
+    cat << EOL
+<h2><a name="/etc/issue">/etc/issue</a></h2>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat /etc/issue)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_selinux
+#       selinux情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_selinux {
+    typeset selinux=$(grep -w ^SELINUX /etc/selinux/config | awk -F= '{print $2}')
+    typeset selinuxtype=$(grep -w ^SELINUXTYPE /etc/selinux/config | awk -F= '{print $2}')
+
+    cat << EOL
+<h2><a name="SELinux">SELinux</a></h2>
+
+<h3>/etc/selinux/config</h3>
+<table>
+  <tr><th>項目</th> <th>値</th> <th>備考</th></tr>
+  <tr><th>SELINUX</th> <td>${selinux}</td> <td>enforcing/permissive/disabled</td></tr>
+  <tr><th>SELINUXTYPE</th> <td>${selinuxtype}</td> <td>targeted/minimum/mls</td></tr>
+</table>
+
+EOL
+
+    if [[ ${selinux} != "disabled" ]] ; then
+        cat << EOL
+
+<h3>selinux policy</h3>
+<table>
+  <tr><th>確認コマンド</th> <td>getsebool -a</td></tr>
+</table>
+<textarea rows="10" wrap="off" readonly>
+$(getsebool -a)
+</textarea>
+
+EOL
+    fi
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_pam
+#       pam情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_pam {
+    typeset -i rows=0
+
+    cat << EOL
+<h2><a name="PAM">PAM</a></h2>
+EOL
+
+    for buf in $(ls /etc/pam.d/* | grep -v @)
+    do
+        rows=$(cat ${buf} 2>/dev/null | wc -l)
+        if (( rows > 5 )) ; then
+            rows=10
+        else
+            rows=5
+        fi
+
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_paddpolicy
+#       パスワードポリシー情報を出力する
+#       /etc/login.def からパスワード有効期限、/etc/security/pwquality.conf
+#       からパスワードルールを出力する
+#-------------------------------------------------------------------------------
+function fnc_passpolicy {
+    cat << EOL
+<h2><a name="パスワードポリシー">パスワードポリシー</a></h2>
+<h3>/etc/login.defs</h3>
+パスワード有効期限に関する設定のみ抜粋
+<table>
+  <tr><th>項目</th> <th>値</th> <th>備考</th></tr>
+$(grep ^PASS /etc/login.defs | awk '{
+  printf("  <tr><td>%s</td> <td>%s</td> <td></td></tr>\n",$1,$2);
+}')
+</table>
+
+<h3>/etc/security/pwquality.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/security/pwquality.conf 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_sudo
+#       /etc/sudoers情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_sudo {
+    cat << EOL
+<h2><a name="sudo">sudo</a></h2>
+<h3>/etc/sudoers</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/sudoers 2>&1)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_sshkey
+#       $HOME/.ssh情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_sshkey {
+    typeset buf
+    typeset buf2
+    cat << EOL
+<h2><a name="ssh鍵ファイル">ssh鍵ファイル</a></h2>
+EOL
+    for buf in $(awk -F: '{if($7!="/sbin/nologin")print $6}' /etc/passwd | sort -u)
+    do
+        buf2=$(ls -ld ${buf}/.ssh ${buf}/.ssh/* 2>/dev/null | grep -v @)
+        if [[ -z "${buf2}" ]] ; then
+            continue
+        fi
+        cat << EOL
+<h3>${buf}/.ssh</h3>
+<textarea rows="5" wrap="off" readonly>
+${buf2}
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_firewalld
+#       Firewallサービス情報を出力する
+#
+#   return:
+#       0	firewalld有効
+#       1       firewalld無効
+#-------------------------------------------------------------------------------
+function fnc_firewalld {
+    typeset buf1=$(systemctl is-enabled firewalld)
+    typeset buf2=$(systemctl is-active firewalld)
+
+    cat << EOL
+<h2><a name="firewalld">firewalld</a></h2>
+<table>
+  <tr><th>Firewall有効</th> <th>active</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf1}</td> <td>${buf2}</td> <td>systemctl status firewalld</td> <td></td></tr>
+</table>
+
+EOL
+
+    if [[ "${buf1}" != "enabled" ]] ; then
+        return 1
+    fi 
+
+    return 0
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_firewall_defaultzone
+#       Firewall Default Zone情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_firewall_defaultzone {
+    typeset buf=$(firewall-cmd --get-default-zone)
+
+    cat << EOL
+<h2><a name="Default Zone">Default Zone</a></h2>
+<table>
+  <tr><th>デフォルトゾーン</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>firewall-cmd --get-default-zone</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_firewall_activezone
+#       Firewall Active Zone情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_firewall_activezone {
+    typeset zone
+    typeset buf
+
+    cat << EOL
+<h2><a name="Active Zone">Active Zone</a></h2>
+EOL
+
+    for zone in $(firewall-cmd --list-all-zones | grep -i active | awk '{print $1}')
+    do
+        buf=$(firewall-cmd --list-all --zone=${zone})
+        cat << EOL
+<h3>${zone}</h3>
+<textarea rows="10" wrap="off" readonly>
+${buf}
+</textarea>
+
+EOL
+    done
+
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_firewall_service
+#       Firewall Service情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_firewall_service {
+    typeset actzone
+    typeset services
+    typeset buf
+
+    cat << EOL
+<h2><a name="サービス設定">サービス設定</a></h2>
+EOL
+
+    # 全Active Zoneの全てのservice名を取得
+    for actzone in $(firewall-cmd --list-all-zones | grep -w active | awk '{print $1}')
+    do
+        services="${services} $(firewall-cmd --zone=${actzone} --list-services)"
+    done
+
+    # 重複したservice名を除外してservice設定を出力
+    for service in $(echo ${services} | tr ' ' '\n' | sort -u)
+    do
+        cat << EOL
+<h3>/usr/lib/firewalld/services/${service}.xml</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /usr/lib/firewalld/services/${service}.xml)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_systemctl
+#       default.target情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_systemctl {
+    typeset buf=$(systemctl get-default)
+    cat << EOL
+<h2><a name="デフォルトターゲット">デフォルトターゲット</a></h2>
+<table>
+  <tr><th>デフォルトターゲット</td> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>${buf}</td> <td>systemctl get-default</td> <td></td></tr>
+</table>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_systmed
+#       OS起動サービス情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_systemd {
+    typeset buf=$(systemctl get-default)
+    cat << EOL
+<h2><a name="起動サービス">起動サービス</a></h2>
+<table>
+  <tr><th>確認コマンド</th> <td>systemctl list-units -l</td></tr>
+</table>
+<textarea rows="10" wrap="off" readonly>
+$(systemctl list-units -l)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_rsyslog
+#       rsyslog情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_rsyslog {
+    cat << EOL
+<h2><a name="rsyslog">rsyslog</a></h2>
+<h3>/etc/sysconfig/rsyslog</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/sysconfig/rsyslog)
+</textarea>
+
+<h3>/etc/rsyslog.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/rsyslog.conf)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_logrotate
+#       logrotate情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_logrotate {
+    typeset -i rows=0
+
+    cat << EOL
+<h2><a name="logrotate">logrotate</a></h2>
+<h3>/etc/logrotate.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/logrotate.conf)
+</textarea>
+
+EOL
+
+    for buf in $(ls /etc/logrotate.d/* | grep -v @)
+    do
+        rows=$(cat ${buf} 2>/dev/null | wc -l)
+        if (( rows > 5 )) ; then
+            rows=10
+        else
+            rows=5
+        fi
+
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_cron
+#       cron情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_cron {
+    typeset -i rows=0
+
+    cat << EOL
+<h2><a name="cron">cron</a></h2>
+<h3>/etc/crontab</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/crontab)
+</textarea>
+
+EOL
+
+    if [[ -f /etc/cron.allow ]] ; then
+        cat << EOL
+<h3>/etc/cron.allow</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/cron.allow 2>&1)
+</textarea>
+
+EOL
+    fi
+
+    cat << EOL
+<h3>/etc/cron.deny</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/cron.deny 2>&1)
+</textarea>
+
+EOL
+
+    for buf in $(ls /var/spool/cron/* 2>/dev/null | grep -v @)
+    do
+        rows=$(cat ${buf} 2>/dev/null | wc -l)
+        if (( rows > 5 )) ; then
+            rows=10
+        else
+            rows=5
+        fi
+
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_anacron
+#       anacron情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_anacron {
+    typeset -i rows=0
+
+    cat << EOL
+<h2><a name="anacron">anacron</a></h2>
+<h3>/etc/anacrontab</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/anacrontab)
+</textarea>
+
+EOL
+
+    for buf in $(ls /etc/cron.d/* /etc/cron.hourly/* /etc/cron.daily/* /etc/cron.weekly/* /etc/cron.monthly/* 2>/dev/null | grep -v @)
+    do
+        rows=$(cat ${buf} 2>/dev/null | wc -l)
+        if (( rows > 5 )) ; then
+            rows=10
+        else
+            rows=5
+        fi
+
+        cat << EOL
+<h3>${buf}</h3>
+<textarea rows="${rows}" wrap="off" readonly>
+$(cat ${buf} 2>&1)
+</textarea>
+
+EOL
+    done
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_nfs
+#       NFSサーバ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_nfs {
+    typeset rpcbind=$(rpm -qa | grep -qw rpcbind)
+    typeset nfsutils=$(rpm -qa | grep -qw nfs-utils)
+
+    echo "<h2><a name="NFS">NFS</a></h2>"
+
+    # rpcbind or nfs-utils is installed ?
+    if [[ -z "${rpcbind}" || -z "${nfsutils}" ]] ; then
+        echo "NFS Server is not configured."
+        echo ""
+        return
+    fi
+
+    cat << EOL
+<h3>service</h3>
+<table>
+  <tr><th>項目</th> <th>Active</th> <th>確認コマンド</th> <th>備考</th></tr>
+  <tr><td>rpcbind</td> <td>$(systemctl is-active rpcbind)</td> <td>systemctl is-active rpcbind</td> <td></td></tr>
+  <tr><td>nfs-server</td> <td>$(systemctl is-active nfs-server)</td> <td>systemctl is-active nfs-server</td> <td></td></tr>
+  <tr><td>nfs-lock</td> <td>$(systemctl is-active nfs-lock)</td> <td>systemctl is-active nfs-lock</td> <td></td></tr>
+  <tr><td>nfs-idmap</td> <td>$(systemctl is-active nfs-idmap)</td> <td>systemctl is-active nfs-idmap</td> <td></td></tr>
+</table>
+
+<h3>/etc/exports</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/exports 2>&1)
+</textarea>
+
+<h3>/etc/idmapd.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/idmapd.conf)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_samba
+#       SMBサーバ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_samba {
+    typeset -i rc
+
+    echo "<h2><a name="samba">samba</a></h2>"
+
+    # samba is installed ?
+    systemctl is-enabled smb.service 1>/dev/null 2>&1
+    rc=$?
+    if [[ ${rc} != 0 ]] ; then
+        echo "SMB Server is not configured."
+        echo ""
+        return
+    fi
+
+    cat << EOL
+<h3>/etc/samba/smb.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/samba/smb.conf)
+</textarea>
+
+EOL
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_vsftpd
+#       vsftpサーバ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_vsftpd {
+    typeset buf=$(rpm -qa | grep -qw vsftpd)
+
+    echo "<h2><a name="vsftpd">vsftpd</a></h2>"
+
+    if [[ -z "${buf}" ]] ; then
+        echo "VSFTPD Server is not configured."
+        echo ""
+        return
+    fi
+
+    cat << EOL
+<h3>/etc/vsftpd/vsftpd.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/vsftpd/vsftpd.conf)
+</textarea>
+
+<h3>/etc/vsftpd/user_list</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/vsftpd/user_list)
+</textarea>
+
+<h3>/etc/vsftpd/chroot_list</h3>
+<textarea rows="5" wrap="off" readonly>
+$(cat /etc/vsftpd/chroot_list)
+</textarea>
+
+EOL
+
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_snmp
+#       snmpサーバ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_snmp {
+    typeset buf=$(rpm -qa | grep -qw snmp)
+
+    echo "<h2><a name="SNMP">SNMP</a></h2>"
+
+    if [[ -z "${buf}" ]] ; then
+        echo "SNMP is not configured."
+        echo ""
+        return
+    fi
+
+    cat << EOL
+<h3>/etc/snmp/snmpd.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/snmp/snmpd.conf)
+</textarea>
+
+EOL
+
+}
+
+
+#-------------------------------------------------------------------------------
+#   fnc_apache
+#       httpdサーバ情報を出力する
+#-------------------------------------------------------------------------------
+function fnc_apache {
+    typeset buf=$(rpm -qa | grep -qw httpd)
+
+    echo "<h2><a name="Apache">Apache</a></h2>"
+
+    if [[ -z "${buf}" ]] ; then
+        echo "Apache is not configured."
+        echo ""
+        return
+    fi
+
+    cat << EOL
+<h3>/etc/httpd/conf/httpd.conf</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/httpd/conf/httpd.conf)
+</textarea>
+
+EOL
+
+}
+
+
+#-------------------------------------------------------------------------------
+#   main
+#-------------------------------------------------------------------------------
+typeset -r HOSTNAME=$(uname -n)
+typeset -i rc=0
+
+if [[ -f ${HOSTNAME}.html ]] ; then
+    mv ${HOSTNAME}.html ${HOSTNAME}.$(date +%Y%m%d%H%M%S).html
+fi
+
+(
+fnc_htmlheader
+fnc_index
+echo "<h1>${HOSTNAME} Parameter Sheet</h1>"
+
+echo "<h1>OS基本設定</h1>"
+fnc_hostname
+fnc_version
+fnc_timezone
+fnc_keyboard
+fnc_lang
+
+echo "<h1>YUM</h1>"
+fnc_yumconf
+fnc_yumrepos
+fnc_yumrpmg
+fnc_yumrpm
+
+echo "<h1>ネットワーク</h1>"
+fnc_netif
+fnc_route
+fnc_nsswitch
+fnc_dns
+fnc_hosts
+fnc_services
+fnc_sshd
+fnc_ssh
+fnc_chrony
+
+echo "<h1>ディスク</h1>"
+fnc_pv
+fnc_vg
+fnc_lv
+fnc_fs
+
+echo "<h1>グループ/ユーザ</h1>"
+fnc_group
+fnc_user
+fnc_limits
+fnc_profile
+fnc_bash_profile
+fnc_etc_bashrc
+fnc_bashrc
+
+echo "<h1>OS詳細設定</h1>"
+fnc_ctrlaltdel
+fnc_sysctl
+fnc_modprobe
+fnc_kdump
+fnc_grub
+fnc_motd
+fnc_issue
+
+echo "<h1>セキュリティ設定</h1>"
+fnc_selinux
+fnc_pam
+fnc_passpolicy
+fnc_sudo
+fnc_sshkey
+
+echo "<h1>Firewall設定</h1>"
+fnc_firewalld
+rc=$?
+if [[ ${rc} == 0 ]] ; then
+    fnc_firewall_defaultzone
+    fnc_firewall_activezone
+    fnc_firewall_service
+fi
+
+echo "<h1>サービス起動設定</h1>"
+fnc_systemctl
+fnc_systemd
+
+echo "<h1>ログ設定</h1>"
+fnc_rsyslog
+fnc_logrotate
+
+echo "<h1>ジョブ設定</h1>"
+fnc_cron
+fnc_anacron
+
+echo "<h1>サーバサービス設定</h1>"
+fnc_nfs
+fnc_samba
+fnc_vsftpd
+fnc_snmp
+fnc_apache
+
+fnc_htmlfooter
+) > ${HOSTNAME}.html
+
