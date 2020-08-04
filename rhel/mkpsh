@@ -1234,6 +1234,9 @@ EOL
         buf=$(firewall-cmd --list-all --zone=${zone})
         cat << EOL
 <h3>${zone}</h3>
+<table>
+  <tr><th>確認コマンド</th> <td>firewall-cmd --list-all --zone=${zone}</td></tr>
+</table>
 <textarea rows="10" wrap="off" readonly>
 ${buf}
 </textarea>
