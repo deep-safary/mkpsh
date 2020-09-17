@@ -796,7 +796,7 @@ EOL
 
 #-------------------------------------------------------------------------------
 #   fnc_rctcpip
-#       /etc/rc.tcpipî•ñ‚ğo—Í‚·‚é
+#       /etc/rc.tcpip, /etc/rc.net î•ñ‚ğo—Í‚·‚é
 #-------------------------------------------------------------------------------
 function fnc_rctcpip {
     cat << EOL
@@ -804,6 +804,11 @@ function fnc_rctcpip {
 <h3>/etc/rc.tcpip</h3>
 <textarea rows="10" wrap="off" readonly>
 $(cat /etc/rc.tcpip 2>&1)
+</textarea>
+
+<h3>/etc/rc.net</h3>
+<textarea rows="10" wrap="off" readonly>
+$(cat /etc/rc.net 2>&1)
 </textarea>
 
 EOL
@@ -1939,5 +1944,5 @@ fnc_snmp
 fnc_nfs
 
 fnc_htmlfooter
-) > ${HOSTNAME}.html
+) > ${HOSTNAME}.html 2>&1
 
